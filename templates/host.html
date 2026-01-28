@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exponentes | Sesion I</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    
+    <script>
+        window.renderHost = function(state) {
+            console.log("Host Render:", state);
+            document.getElementById('phase-display').innerText = state.phase;
+            document.getElementById('user-count').innerText = Object.keys(state.users).length;
+
+            // User List
+            const userList = document.getElementById('user-list');
+            if(userList) {
+                userList.innerHTML = Object.values(state.users).map(u => 
+                    `<div>${u.name} <small>${u.connected ? 'OK' : 'DISC'}</small></div>`
+                ).join('');
+            }
+
+            // --- VISIBILITY TOGGLES ---
+            const lobby = document.getElementById('ctrl-lobby');
+            const active = document.getElementById('ctrl-active');
+            const leader = document.getElementById('ctrl-leaderboard');
+            const nextBtn = document.getElementById('btn-next');
+
+            // Reset
+            lobby.classList.add('hidden');
+            active.classList.add('hidden');
+            leader.classList.add('hidden');
+
+            if (state.phase === "LOBBY") {
+                lobby.classList.remove('hidden');
+            
+            } else if (state.phase === "LEADERBOARD") {
+                leader.classList.remove('hidden');
+                const ul = document.getElementById('score-list');
+                ul.innerHTML = Object.values(state.teams)
+                    .sort((a,b) => b.score - a.score)
+                    .map(t => `<li>${t.name} - ${t.score.toFixed(1)}</li>`).join('');
+            
+            } else {
+                // PREP, PRESENTING, VOTING
+                active.classList.remove('hidden');
+                
+                const info = document.getElementById('active-info');
+                const timerDisplay = document.getElementById('timer-display');
+                
+                // Format Timer
+                const m = Math.floor(state.timer / 60);
+                const s = state.timer % 60;
+                timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+                if (state.phase === "PREP") {
+                    info.innerHTML = `<h3>PREPARATION PHASE</h3>Teams are discussing.`;
+                    nextBtn.innerText = "START PRESENTATIONS NOW";
+                } else if (state.phase === "PRESENTING") {
+                    const t = state.teams[state.presenting_team_id];
+                    info.innerHTML = `Presenting: <b>${t ? t.name : 'Unknown'}</b><br>Context: ${t ? t.context : ''}`;
+                    nextBtn.innerText = "FINISH & VOTE";
+                } else if (state.phase === "VOTING") {
+                    info.innerHTML = "<h3>VOTING...</h3>Wait for votes to come in.";
+                    nextBtn.innerText = "NEXT TEAM / FINISH";
+                }
+            }
+        };
+
+        function hostCreateTeams() {
+            const n = document.getElementById('num-teams').value;
+            socket.emit('host_create_teams', {num_teams: n});
+        }
+        function hostStartPrep() {
+            socket.emit('host_start_prep', {seconds: 1200});
+        }
+        function hostNextStep() {
+            socket.emit('host_next_step', {});
+        }
+    </script>
+
+    <script src="/static/client.js"></script>
+</head>
+<body class="host-theme">
+    <div class="container">
+        <h1>HOST CONTROL</h1>
+        <div id="status-bar">
+            Phase: <span id="phase-display">LOBBY</span> | 
+            Users: <span id="user-count">0</span>
+        </div>
+
+        <div id="ctrl-lobby" class="control-group">
+            <h3>Lobby</h3>
+            <div id="user-list" class="scrolling-list"></div>
+            <label>Teams: <input type="number" id="num-teams" value="2" min="2" max="10"></label>
+            <button onclick="hostCreateTeams()">Assign Teams</button>
+            <button onclick="hostStartPrep()">Start Prep (20m)</button>
+        </div>
+
+        <div id="ctrl-active" class="control-group hidden">
+            <h2 id="timer-display">00:00</h2>
+            <div id="active-info"></div>
+            <br>
+            <button id="btn-next" class="primary-btn" onclick="hostNextStep()" style="background: white; color: black; border-width: 4px;">
+                ADVANCE PHASE
+            </button>
+        </div>
+        
+        <div id="ctrl-leaderboard" class="control-group hidden">
+            <h2>Final Scores</h2>
+            <ul id="score-list"></ul>
+        </div>
+    </div>
+</body>
+</html>

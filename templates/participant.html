@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exponentes | Sesion 1</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script> 
+    <script src="/static/client.js"></script>
+    <style>
+        /* Extra styles for slider */
+        input[type=range] {
+            width: 80%;
+            margin: 20px 0;
+        }
+        .vote-display {
+            font-size: 3rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div id="view-login">
+            <h2>Bienvenid@</h2>
+            <input type="text" id="username" placeholder="Escribe tu nombre">
+            <button id="btn-join" onclick="joinSession()">Unirse</button>
+        </div>
+
+        <div id="view-lobby" class="hidden">
+            <h2 id="lobby-msg">Waiting for Host...</h2>
+            <p>Ya estás dentro.</p>
+        </div>
+
+        <div id="view-prep" class="hidden">
+            <h1>Prepárate: arma tu presentación</h1>
+            <h2 id="prep-timer"></h2>
+            <div class="card">
+                <h3>Estás en el equipo: <span id="my-team-name"></span></h3>
+                <p class="context-box" id="my-context"></p>
+                <h4>En esta Scooby-aventura están:</h4>
+                <ul id="my-teammates"></ul>
+            </div>
+        </div>
+
+        <div id="view-audience" class="hidden">
+            <h1>No platiques, pon atención.</h1>
+            <h3>Está presentando el equipo: <span id="presenting-team"></span></h3>
+            <p class="context-box" id="presenting-context"></p>
+        </div>
+
+        <div id="view-speaker" class="hidden">
+            <h1>Te toca, ¡ánimo!</h1>
+            <h2 id="speaker-timer"></h2>
+            <p class="big-text">Nada puede salir mal...</p>
+        </div>
+
+        <div id="view-voting" class="hidden">
+            <h1>Juzga a tus amigos:</h1>
+            <p>Dado el contexto, cuánto le das del 1 al 10</p>
+            <span id="vote-val" class="vote-display">5</span>
+            <input type="range" id="vote-slider" min="1" max="10" value="5">
+            
+            <br>
+            <button onclick="submitVote()" style="width: 80%;">SUBMIT SCORE</button>
+        </div>
+
+        <div id="view-leaderboard" class="hidden">
+            <h1>WINNERS</h1>
+            <ul id="final-scores"></ul>
+        </div>
+
+    </div>
+</body>
+</html>

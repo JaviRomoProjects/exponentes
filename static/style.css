@@ -1,0 +1,71 @@
+/* Minimal Black & White High Contrast */
+:root {
+    --bg: #ffffff;
+    --text: #000000;
+    --accent: #000000;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', Courier, monospace; /* Monospace for "System" feel */
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+.host-theme {
+    background-color: #f0f0f0;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+h1 { font-size: 2.5rem; text-transform: uppercase; border-bottom: 2px solid black; padding-bottom: 10px; }
+button {
+    background: black;
+    color: white;
+    border: 2px solid black;
+    padding: 15px 30px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 10px;
+    font-family: inherit;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+button:active { background: white; color: black; }
+
+.hidden { display: none !important; }
+
+.card {
+    border: 2px solid black;
+    padding: 20px;
+    margin-top: 20px;
+    text-align: left;
+}
+
+.context-box {
+    font-size: 1.2rem;
+    font-weight: bold;
+    background: #eee;
+    padding: 10px;
+}
+
+.vote-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.scrolling-list {
+    height: 150px;
+    overflow-y: scroll;
+    border: 1px solid #999;
+    text-align: left;
+    padding: 5px;
+    margin-bottom: 10px;
+}
