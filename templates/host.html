@@ -78,6 +78,11 @@
         function hostNextStep() {
             socket.emit('host_next_step', {});
         }
+        function hostRestartSession() {
+            if (confirm('Are you sure you want to restart the session? All data will be cleared.')) {
+                socket.emit('host_restart_session', {});
+            }
+        }
     </script>
 
     <script src="/static/client.js"></script>
@@ -92,6 +97,7 @@
 
         <div id="ctrl-lobby" class="control-group">
             <h3>Lobby</h3>
+            <button onclick="hostRestartSession()" style="background: #ff6b6b; color: white; margin-bottom: 15px;">🔄 Restart Session</button>
             <div id="user-list" class="scrolling-list"></div>
             <label>Teams: <input type="number" id="num-teams" value="2" min="2" max="10"></label>
             <button onclick="hostCreateTeams()">Assign Teams</button>

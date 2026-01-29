@@ -91,6 +91,11 @@ async def host_next_step(sid, data):
     await broadcast_state()
 
 @sio.event
+async def host_restart_session(sid, data):
+    manager.reset_session()
+    await broadcast_state()
+
+@sio.event
 async def cast_vote(sid, data):
     uid = data.get('user_id')
     score = int(data.get('score'))

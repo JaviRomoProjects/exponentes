@@ -113,6 +113,18 @@ class SessionManager:
                 self.teams[self.presenting_team_id]["score"] += avg
             self.teams[self.presenting_team_id]["votes_current_round"] = []
 
+    def reset_session(self):
+        """Reset the session to lobby state, clearing teams and votes but keeping users."""
+        self.teams = {}
+        self.phase = Phase.LOBBY
+        self.timer_end = None
+        self.presenting_team_id = None
+        self.presented_teams = set()
+        self.votes = {}
+        # Keep users but clear their team assignments
+        for user in self.users.values():
+            user["team_id"] = None
+
     def get_state(self):
         current_time = asyncio.get_event_loop().time()
         remaining = 0
