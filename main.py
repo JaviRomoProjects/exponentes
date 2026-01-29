@@ -1,3 +1,4 @@
+import os
 import uvicorn
 import socketio
 import qrcode
@@ -115,22 +116,35 @@ if __name__ == "__main__":
             s.close()
         return IP
 
-    local_ip = get_local_ip()
-    url = f"http://{local_ip}:8000"
-    
-    print("\n" + "="*40)
-    print(f" WORKSHOP TOOL STARTED")
-    print(f" Host Machine IP: {local_ip}")
-    print("="*40)
-    print(f" -> HOST PANEL:    {url}/host")
-    print(f" -> PARTICIPANTS:  {url}")
-    print("="*40 + "\n")
+    port = int(os.getenv("PORT", "8000"))
+    external_url = os.getenv("RENDER_EXTERNAL_URL")
+    is_cloud = bool(os.getenv("RENDER")) or external_url is not None or os.getenv("PORT") is not None
 
-    # Generate QR Code for the valid LAN URL
-    qr = qrcode.QRCode()
-    qr.add_data(url)
-    qr.print_ascii()
+    if is_cloud:
+        url = external_url or f"http://localhost:{port}"
+        print("\n" + "="*40)
+        print(" WORKSHOP TOOL STARTED (CLOUD)")
+        print("="*40)
+        print(f" -> HOST PANEL:    {url}/host")
+        print(f" -> PARTICIPANTS:  {url}")
+        print("="*40 + "\n")
+    else:
+        local_ip = get_local_ip()
+        url = f"http://{local_ip}:{port}"
+        
+        print("\n" + "="*40)
+        print(f" WORKSHOP TOOL STARTED")
+        print(f" Host Machine IP: {local_ip}")
+        print("="*40)
+        print(f" -> HOST PANEL:    {url}/host")
+        print(f" -> PARTICIPANTS:  {url}")
+        print("="*40 + "\n")
+
+        # Generate QR Code for the valid LAN URL
+        qr = qrcode.QRCode()
+        qr.add_data(url)
+        qr.print_ascii()
 
     # Host='0.0.0.0' is crucial: it allows external connections
-    uvicorn.run(socket_app, host="0.0.0.0", port=8000)
+    uvicorn.run(socket_app, host="0.0.0.0", port=port)
     # --- FIXED CONNECTION LOGIC END ---
