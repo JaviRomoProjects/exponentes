@@ -50,6 +50,15 @@ function joinSocket(uid, name) {
 
 // --- 3. SOCKET EVENT HANDLING ---
 
+socket.on('session_restart', () => {
+    console.log('[INFO] Session restarted - clearing localStorage');
+    localStorage.removeItem('workshop_uid');
+    localStorage.removeItem('workshop_name');
+    myUserId = null;
+    myName = null;
+    location.reload();
+});
+
 socket.on('state_update', (state) => {
     // HOST LOGIC HOOK
     if(document.body.classList.contains('host-theme')) {

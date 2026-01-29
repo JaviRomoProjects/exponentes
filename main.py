@@ -92,8 +92,11 @@ async def host_next_step(sid, data):
 
 @sio.event
 async def host_restart_session(sid, data):
+    print(f"[DEBUG] host_restart_session called from {sid}")
     manager.reset_session()
+    await sio.emit('session_restart', {}, skip_sid=sid)
     await broadcast_state()
+    print(f"[DEBUG] Session reset complete")
 
 @sio.event
 async def cast_vote(sid, data):

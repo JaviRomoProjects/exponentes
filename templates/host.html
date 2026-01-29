@@ -16,9 +16,13 @@
             // User List
             const userList = document.getElementById('user-list');
             if(userList) {
-                userList.innerHTML = Object.values(state.users).map(u => 
-                    `<div>${u.name} <small>${u.connected ? 'OK' : 'DISC'}</small></div>`
-                ).join('');
+                userList.innerHTML = Object.values(state.users).map(u => {
+                    let teamInfo = '';
+                    if(u.team_id && state.teams[u.team_id]) {
+                        teamInfo = ` - ${state.teams[u.team_id].name}`;
+                    }
+                    return `<div>${u.name}${teamInfo} <small>${u.connected ? 'OK' : 'DISC'}</small></div>`;
+                }).join('');
             }
 
             // --- VISIBILITY TOGGLES ---
@@ -80,6 +84,7 @@
         }
         function hostRestartSession() {
             if (confirm('Are you sure you want to restart the session? All data will be cleared.')) {
+                console.log('Emitting host_restart_session event');
                 socket.emit('host_restart_session', {});
             }
         }
