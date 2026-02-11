@@ -8,7 +8,10 @@
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     
     <script>
+        let currentState = null; // Store current state for validation
+        
         window.renderHost = function(state) {
+            currentState = state; // Update stored state
             console.log("Host Render:", state);
             document.getElementById('phase-display').innerText = state.phase;
             document.getElementById('user-count').innerText = Object.keys(state.users).length;
@@ -19,6 +22,23 @@
                 userList.innerHTML = Object.values(state.users).map(u => 
                     `<div>${u.name} <small>${u.connected ? 'OK' : 'DISC'}</small></div>`
                 ).join('');
+            }
+
+            // Team Breakdown
+            const teamBreakdown = document.getElementById('team-breakdown');
+            if(teamBreakdown) {
+                if(Object.keys(state.teams).length > 0) {
+                    teamBreakdown.innerHTML = '<h4 style="margin-top: 20px;">Team Assignments:</h4>' + 
+                        Object.values(state.teams).map(team => {
+                            const members = team.members.map(uid => state.users[uid]?.name || 'Unknown').join(', ');
+                            return `<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                                <strong>${team.name}</strong><br>
+                                <small>Members: ${members}</small>
+                            </div>`;
+                        }).join('');
+                } else {
+                    teamBreakdown.innerHTML = '';
+                }
             }
 
             // --- VISIBILITY TOGGLES ---
@@ -52,7 +72,8 @@
                 // Format Timer
                 const m = Math.floor(state.timer / 60);
                 const s = state.timer % 60;
-                timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                const pausedIndicator = state.timer_paused ? ' [PAUSED]' : '';
+                timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}${pausedIndicator}`;
 
                 if (state.phase === "PREP") {
                     info.innerHTML = `<h3>PREPARATION PHASE</h3>Teams are discussing.`;
@@ -62,7 +83,11 @@
                     info.innerHTML = `Presenting: <b>${t ? t.name : 'Unknown'}</b><br>Context: ${t ? t.context : ''}`;
                     nextBtn.innerText = "FINISH & VOTE";
                 } else if (state.phase === "VOTING") {
-                    info.innerHTML = "<h3>VOTING...</h3>Wait for votes to come in.";
+                    const t = state.teams[state.presenting_team_id];
+                    const votesReceived = t ? (t.voters_this_round ? t.voters_this_round.length : 0) : 0;
+                    const presentingMembers = t ? t.members.length : 0;
+                    const totalEligible = Object.keys(state.users).length - presentingMembers;
+                    info.innerHTML = `<h3>VOTING...</h3>Votes received: ${votesReceived}/${totalEligible}<br><small>Auto-advances when all votes are in</small>`;
                     nextBtn.innerText = "NEXT TEAM / FINISH";
                 }
             }
@@ -71,12 +96,75 @@
         function hostCreateTeams() {
             const n = document.getElementById('num-teams').value;
             socket.emit('host_create_teams', {num_teams: n});
+            showNotification(`Creating ${n} teams...`, 'info', 2000);
         }
         function hostStartPrep() {
+            // Validation checks
+            if (!currentState) {
+                showNotification('Cannot start: No state available', 'error', 3000);
+                return;
+            }
+            
+            // Check if teams exist
+            if (Object.keys(currentState.teams).length === 0) {
+                showNotification('Cannot start: You must create teams first!', 'error', 3000);
+                return;
+            }
+            
+            // Check if all users have been assigned to a team
+            const users = Object.values(currentState.users);
+            const unassignedUsers = users.filter(u => !u.team_id);
+            
+            if (unassignedUsers.length > 0) {
+                const names = unassignedUsers.map(u => u.name).join(', ');
+                showNotification(`Cannot start: ${unassignedUsers.length} participant(s) not assigned to teams: ${names}`, 'error', 4000);
+                return;
+            }
+            
+            // All checks passed, start prep
             socket.emit('host_start_prep', {seconds: 1200});
+            showNotification('Starting preparation phase (20 minutes)', 'success', 3000);
         }
         function hostNextStep() {
             socket.emit('host_next_step', {});
+            showNotification('Advancing to next phase...', 'info', 2000);
+        }
+        function hostRestartSession() {
+            if (typeof showConfirm === 'function') {
+                showConfirm('Are you sure you want to start a new session? All data will be cleared.', () => {
+                    console.log('Emitting host_restart_session event');
+                    socket.emit('host_restart_session', {});
+                    showNotification('Session restarted', 'success');
+                });
+            } else {
+                // Fallback if showConfirm isn't loaded yet
+                if (confirm('Are you sure you want to start a new session? All data will be cleared.')) {
+                    console.log('Emitting host_restart_session event');
+                    socket.emit('host_restart_session', {});
+                }
+            }
+        }
+        function hostPauseTimer() {
+            console.log('Pausing timer');
+            socket.emit('host_pause_timer', {});
+            showNotification('Timer paused', 'info', 2000);
+        }
+        function hostResumeTimer() {
+            console.log('Resuming timer');
+            socket.emit('host_resume_timer', {});
+            showNotification('Timer resumed', 'success', 2000);
+        }
+        function hostAddTime(seconds) {
+            console.log('Adjusting timer by', seconds, 'seconds');
+            socket.emit('host_adjust_timer', {seconds: seconds});
+            const sign = seconds > 0 ? '+' : '';
+            const mins = Math.abs(seconds) / 60;
+            showNotification(`Timer adjusted: ${sign}${mins} min`, 'info', 2000);
+        }
+        function hostResetTimer() {
+            console.log('Resetting timer');
+            socket.emit('host_reset_timer', {});
+            showNotification('Timer reset', 'warning', 2000);
         }
     </script>
 
@@ -93,14 +181,30 @@
         <div id="ctrl-lobby" class="control-group">
             <h3>Lobby</h3>
             <div id="user-list" class="scrolling-list"></div>
+            <div id="team-breakdown"></div>
             <label>Teams: <input type="number" id="num-teams" value="2" min="2" max="10"></label>
             <button onclick="hostCreateTeams()">Assign Teams</button>
             <button onclick="hostStartPrep()">Start Prep (20m)</button>
+            <button onclick="hostRestartSession()">New Session</button>
         </div>
 
         <div id="ctrl-active" class="control-group hidden">
             <h2 id="timer-display">00:00</h2>
             <div id="active-info"></div>
+            <div id="timer-controls" style="margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px;">
+                <h4>Timer Controls</h4>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <button onclick="hostPauseTimer()" style="flex: 1; min-width: 80px;">Pause</button>
+                    <button onclick="hostResumeTimer()" style="flex: 1; min-width: 80px;">Resume</button>
+                    <button onclick="hostResetTimer()" style="flex: 1; min-width: 80px;">Reset</button>
+                </div>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                    <button onclick="hostAddTime(60)" style="flex: 1; min-width: 60px;">+1 min</button>
+                    <button onclick="hostAddTime(300)" style="flex: 1; min-width: 60px;">+5 min</button>
+                    <button onclick="hostAddTime(-60)" style="flex: 1; min-width: 60px;">-1 min</button>
+                    <button onclick="hostAddTime(-300)" style="flex: 1; min-width: 60px;">-5 min</button>
+                </div>
+            </div>
             <br>
             <button id="btn-next" class="primary-btn" onclick="hostNextStep()" style="background: white; color: black; border-width: 4px;">
                 ADVANCE PHASE
@@ -110,6 +214,7 @@
         <div id="ctrl-leaderboard" class="control-group hidden">
             <h2>Final Scores</h2>
             <ul id="score-list"></ul>
+            <button onclick="hostRestartSession()">New Session</button>
         </div>
     </div>
 </body>

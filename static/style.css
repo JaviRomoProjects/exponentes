@@ -189,3 +189,108 @@ input[type=range]::-webkit-slider-thumb {
     font-variant-numeric: tabular-nums;
     color: var(--text-color);
 }
+
+/* Notification Toast */
+.notification-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--white);
+    color: var(--text-color);
+    padding: 16px 24px;
+    border-radius: var(--radius);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    font-weight: 600;
+    font-size: 1rem;
+    z-index: 10000;
+    min-width: 280px;
+    text-align: center;
+    border-left: 4px solid var(--accent-color);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.notification-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.notification-toast.error {
+    border-left-color: #ef4444;
+}
+
+.notification-toast.success {
+    border-left-color: #10b981;
+}
+
+.notification-toast.warning {
+    border-left-color: #f59e0b;
+}
+
+.notification-toast.info {
+    border-left-color: #3b82f6;
+}
+
+/* Confirmation Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+}
+
+.modal-box {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.modal-overlay.show .modal-box {
+    transform: scale(1);
+}
+
+.modal-message {
+    font-size: 1.1rem;
+    margin-bottom: 24px;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.modal-buttons button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.modal-buttons .btn-cancel {
+    background: #e5e7eb;
+    color: var(--text-color);
+}
+
+.modal-buttons .btn-cancel:hover {
+    background: #d1d5db;
+}

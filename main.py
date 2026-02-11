@@ -67,12 +67,54 @@ async def host_start_prep(sid, data):
     sec = int(data.get('seconds', 300))
     manager.start_prep(sec)
     await broadcast_state()
-    asyncio.create_task(timer_loop(sec))
+    asyncio.create_task(timer_monitor_loop())
 
-async def timer_loop(seconds):
-    await asyncio.sleep(seconds)
-    # Timer finishes silently; state remains in PREP until host clicks 'Next'
-    # or you could broadcast a "time's up" message here.
+async def timer_monitor_loop():
+    """Monitor timer and auto-advance when it reaches zero."""
+    print("[DEBUG] Timer monitor loop started")
+    while True:
+        await asyncio.sleep(1)  # Check every second
+        
+        # Exit if in phases with no timer
+        if manager.phase.value in ["LOBBY", "LEADERBOARD"]:
+            print(f"[DEBUG] Timer monitor exiting - phase is {manager.phase.value}")
+            break
+        
+        # Skip timer check if paused
+        if manager.timer_paused:
+            await broadcast_state()
+            continue
+        
+        # Skip if no active timer
+        if not manager.timer_end:
+            # In VOTING phase, wait for manual advance
+            if manager.phase.value == "VOTING":
+                await broadcast_state()
+                continue
+            else:
+                print(f"[DEBUG] Timer monitor exiting - no timer_end in phase {manager.phase.value}")
+                break
+        
+        # Check remaining time
+        current_time = asyncio.get_event_loop().time()
+        remaining = max(0, int(manager.timer_end - current_time))
+        
+        # Broadcast current state
+        await broadcast_state()
+        
+        # Check if timer expired
+        if remaining <= 0:
+            print(f"[DEBUG] Timer expired in phase {manager.phase.value}, auto-advancing")
+            if manager.phase.value == "PREP":
+                manager.next_presentation()
+                print(f"[DEBUG] Advanced to PRESENTING phase")
+                await broadcast_state()
+                # Continue loop to monitor presentation timer
+            elif manager.phase.value == "PRESENTING":
+                manager.start_voting()
+                print(f"[DEBUG] Advanced to VOTING phase")
+                await broadcast_state()
+                # Continue loop, will wait in VOTING until manual advance
 
 @sio.event
 async def host_start_presentations(sid, data):
@@ -81,13 +123,16 @@ async def host_start_presentations(sid, data):
 
 @sio.event
 async def host_next_step(sid, data):
+    print(f"[DEBUG] Manual next step from phase {manager.phase.value}")
     if manager.phase.value == "PRESENTING":
         manager.start_voting()
     elif manager.phase.value == "VOTING":
         manager.calculate_scores()
         manager.next_presentation()
+        # Timer monitor loop should already be running and will pick up new timer
     elif manager.phase.value == "PREP":
         manager.next_presentation()
+        # Timer monitor loop should already be running
     await broadcast_state()
 
 @sio.event
@@ -99,10 +144,46 @@ async def host_restart_session(sid, data):
     print(f"[DEBUG] Session reset complete")
 
 @sio.event
+async def host_pause_timer(sid, data):
+    print(f"[DEBUG] Pausing timer from {sid}")
+    manager.pause_timer()
+    await broadcast_state()
+
+@sio.event
+async def host_resume_timer(sid, data):
+    print(f"[DEBUG] Resuming timer from {sid}")
+    manager.resume_timer()
+    await broadcast_state()
+
+@sio.event
+async def host_adjust_timer(sid, data):
+    seconds = int(data.get('seconds', 0))
+    print(f"[DEBUG] Adjusting timer by {seconds} seconds from {sid}")
+    manager.adjust_timer(seconds)
+    await broadcast_state()
+
+@sio.event
+async def host_reset_timer(sid, data):
+    print(f"[DEBUG] Resetting timer from {sid}")
+    manager.reset_timer()
+    await broadcast_state()
+
+@sio.event
 async def cast_vote(sid, data):
     uid = data.get('user_id')
     score = int(data.get('score'))
-    manager.cast_vote(uid, score)
+    vote_recorded = manager.cast_vote(uid, score)
+    
+    if vote_recorded:
+        await broadcast_state()
+        
+        # Check if all votes are in
+        if manager.check_all_votes_received():
+            print("[DEBUG] All votes received, auto-advancing")
+            await asyncio.sleep(2)  # Brief pause for users to see results
+            manager.calculate_scores()
+            manager.next_presentation()
+            await broadcast_state()
 
 # --- Execution ---
 if __name__ == "__main__":
