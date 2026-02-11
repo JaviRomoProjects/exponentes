@@ -4,7 +4,6 @@ let myUserId = localStorage.getItem('workshop_uid');
 let myName = localStorage.getItem('workshop_name');
 let localTimerInterval = null; // To store the countdown ID
 
-// --- 1. WAIT FOR PAGE LOAD ---
 document.addEventListener('DOMContentLoaded', () => {
     // Check if we are on participant page (slider exists)
     const slider = document.getElementById('vote-slider');
@@ -23,8 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const joinBtn = document.getElementById('btn-join');
     if (joinBtn) joinBtn.addEventListener('click', joinSession);
 });
-
-// --- 2. CORE FUNCTIONS ---
 
 function joinSession() {
     const nameInput = document.getElementById('username');
@@ -47,17 +44,6 @@ function joinSocket(uid, name) {
     const lobby = document.getElementById('view-lobby');
     if(lobby) lobby.classList.remove('hidden');
 }
-
-// --- 3. SOCKET EVENT HANDLING ---
-
-socket.on('session_restart', () => {
-    console.log('[INFO] Session restarted - clearing localStorage');
-    localStorage.removeItem('workshop_uid');
-    localStorage.removeItem('workshop_name');
-    myUserId = null;
-    myName = null;
-    location.reload();
-});
 
 socket.on('state_update', (state) => {
     // HOST LOGIC HOOK
@@ -90,7 +76,6 @@ function renderParticipant(state) {
         return;
     }
 
-    // --- PHASE ROUTING ---
     if (state.phase === "LOBBY") {
         safeShow('view-lobby');
     
@@ -170,7 +155,6 @@ function submitVote() {
     safeText('lobby-msg', "Vote Sent. Waiting...");
 }
 
-// --- HELPER: REAL-TIME COUNTDOWN ---
 function startLocalTimer(seconds, elementIds) {
     // Clear existing timer to prevent doubles
     if (localTimerInterval) clearInterval(localTimerInterval);

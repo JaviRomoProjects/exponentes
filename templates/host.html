@@ -16,13 +16,9 @@
             // User List
             const userList = document.getElementById('user-list');
             if(userList) {
-                userList.innerHTML = Object.values(state.users).map(u => {
-                    let teamInfo = '';
-                    if(u.team_id && state.teams[u.team_id]) {
-                        teamInfo = ` - ${state.teams[u.team_id].name}`;
-                    }
-                    return `<div>${u.name}${teamInfo} <small>${u.connected ? 'OK' : 'DISC'}</small></div>`;
-                }).join('');
+                userList.innerHTML = Object.values(state.users).map(u => 
+                    `<div>${u.name} <small>${u.connected ? 'OK' : 'DISC'}</small></div>`
+                ).join('');
             }
 
             // --- VISIBILITY TOGGLES ---
@@ -82,12 +78,6 @@
         function hostNextStep() {
             socket.emit('host_next_step', {});
         }
-        function hostRestartSession() {
-            if (confirm('Are you sure you want to restart the session? All data will be cleared.')) {
-                console.log('Emitting host_restart_session event');
-                socket.emit('host_restart_session', {});
-            }
-        }
     </script>
 
     <script src="/static/client.js"></script>
@@ -102,7 +92,6 @@
 
         <div id="ctrl-lobby" class="control-group">
             <h3>Lobby</h3>
-            <button onclick="hostRestartSession()" style="background: #ff6b6b; color: white; margin-bottom: 15px;">🔄 Restart Session</button>
             <div id="user-list" class="scrolling-list"></div>
             <label>Teams: <input type="number" id="num-teams" value="2" min="2" max="10"></label>
             <button onclick="hostCreateTeams()">Assign Teams</button>
