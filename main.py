@@ -4,7 +4,9 @@ import socketio
 import qrcode
 import asyncio
 import socket
-from fastapi import FastAPI, Request
+import secrets
+from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from session_manager import SessionManager
@@ -21,6 +23,28 @@ templates = Jinja2Templates(directory="templates")
 
 # Initialize Logic
 manager = SessionManager()
+security = HTTPBasic()
+
+def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = os.getenv("HOST_USER", "alan").encode("utf8")
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = os.getenv("HOST_PASSWORD", "alancometacos").encode("utf8")
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+    
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 # --- HTTP Routes ---
 @app.get("/")
@@ -28,7 +52,7 @@ async def get_participant_ui(request: Request):
     return templates.TemplateResponse("participant.html", {"request": request})
 
 @app.get("/host")
-async def get_host_ui(request: Request):
+async def get_host_ui(request: Request, username: str = Depends(verify_admin)):
     return templates.TemplateResponse("host.html", {"request": request})
 
 # --- Socket.IO Events ---
@@ -59,7 +83,12 @@ async def join_session(sid, data):
 @sio.event
 async def host_create_teams(sid, data):
     num = int(data.get('num_teams', 2))
-    manager.create_teams(num)
+    success, message = manager.create_teams(num)
+    
+    if not success:
+        await sio.emit('host_error', {'message': message}, room=sid)
+        return
+        
     await broadcast_state()
 
 @sio.event

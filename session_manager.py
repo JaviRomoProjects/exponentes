@@ -51,7 +51,13 @@ class SessionManager:
     def create_teams(self, num_teams):
         self.teams = {}
         self.presented_teams = set()
-        active_users = [u for u in self.users.values()]
+        active_users = [u for u in self.users.values() if u.get("connected", False)]
+        
+        # Validation: prevent creating more teams than users
+        if num_teams > len(active_users):
+            print(f"[DEBUG] create_teams failed: {num_teams} teams requested but only {len(active_users)} users connected")
+            return False, f"Not enough users. Connected: {len(active_users)}, Requested Teams: {num_teams}"
+            
         random.shuffle(active_users)
         selected_contexts = random.sample(TEAM_CONTEXTS, min(num_teams, len(TEAM_CONTEXTS)))
         
@@ -72,6 +78,8 @@ class SessionManager:
             assigned_team = team_ids[i % num_teams]
             self.teams[assigned_team]["members"].append(user["id"])
             self.users[user["id"]]["team_id"] = assigned_team
+            
+        return True, f"Successfully created {num_teams} teams"
 
     def start_prep(self, duration_seconds):
         self.phase = Phase.PREP
